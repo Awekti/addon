@@ -1,6 +1,5 @@
 ## Interface: 30300
 ## Title: hh1tc
-## Notes: Объединённый аддон — индикаторы и утилиты
 ## SavedVariables: HH1TCDB, SirusSuiteDB, GuildPlatesDB, GuildPlatesSettings, GuildFilter, GuildColors, LootTimerDB, RandomPhrasesDB, SirusBankerDB, SammyDB
 
 Core.lua
