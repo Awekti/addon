@@ -119,6 +119,28 @@ local function RequestPlateRefresh(forceRaid)
     if forceRaid then forceRaidRefresh = true end
 end
 
+local MAX_GUILD_PLATES_DB = 2500
+local HOOK_PLATES_INTERVAL = 12
+
+local function CountTable(t)
+    if not t then return 0 end
+    local n = 0
+    for _ in pairs(t) do n = n + 1 end
+    return n
+end
+
+local function TrimGuildPlatesDB()
+    if not GuildPlatesDB then return end
+    local count = CountTable(GuildPlatesDB)
+    if count <= MAX_GUILD_PLATES_DB then return end
+    local toRemove = count - math.floor(MAX_GUILD_PLATES_DB * 0.75)
+    for name in pairs(GuildPlatesDB) do
+        GuildPlatesDB[name] = nil
+        toRemove = toRemove - 1
+        if toRemove <= 0 then break end
+    end
+end
+
 local function CleanName(n) return n and string.match(n, "([^%-]+)") or n end
 
 local function GetSyncChannel()
@@ -175,6 +197,7 @@ local function HandleSyncMessage(msg, channel, sender)
         lastSenderName = sender
     end
     GuildPlatesDB[name] = tag
+    TrimGuildPlatesDB()
     RequestPlateRefresh()
 end
 
@@ -454,7 +477,7 @@ local function UpdatePlateStyle(f, force)
     ApplyRaidIcons(f, force)
 end
 
-local hookedPlates = {}
+local hookedPlates = setmetatable({}, { __mode = "k" })
 
 local function HookPlate(f)
     if not IsPlateFrame(f) or f.gpHooked then return end
@@ -501,7 +524,7 @@ local function RefreshVisiblePlates()
                 plate.gpLastIconOffset = nil
                 plate.gpRaidIcons = nil
             end
-            UpdatePlateStyle(plate, true)
+            UpdatePlateStyle(plate, forceRaid)
         end
     end
     platesNeedRefresh = false
@@ -941,6 +964,7 @@ frame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3, arg4)
                 if g and g ~= "" and guildFilterLookup[g:lower()] then
                     match = true
                     GuildPlatesDB[n] = "<"..g..">"
+                    TrimGuildPlatesDB()
                 end
                 
                 if not match and GuildPlatesDB[n] then
@@ -954,12 +978,9 @@ frame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3, arg4)
     end
 end)
 
-collectgarbage("setpause", 110); collectgarbage("setstepmul", 200)
 frame.lockTimer = 0
 
 frame:SetScript("OnUpdate", function(self, elapsed)
-    -- collectgarbage("step", 2)
-    
     if self.lockTimer and self.lockTimer > 0 then
         self.lockTimer = self.lockTimer - elapsed
         if self.lockTimer <= 0 then 
@@ -992,7 +1013,7 @@ frame:SetScript("OnUpdate", function(self, elapsed)
     end
 
     syncTimerTotal = syncTimerTotal + elapsed
-    if syncTimerTotal > 4 then
+    if syncTimerTotal > HOOK_PLATES_INTERVAL then
         HookPlates()
 
         if syncCounter > 0 and GuildPlatesSettings.showSyncChat then
@@ -1015,10 +1036,10 @@ frame:SetScript("OnUpdate", function(self, elapsed)
         end
     else
         raidRefreshTimer = (raidRefreshTimer or 0) + elapsed
-        if raidRefreshTimer > 0.75 then
+        if raidRefreshTimer > 1.5 then
             for plate in pairs(hookedPlates) do
                 if plate.IsVisible and plate:IsVisible() then
-                    ApplyRaidIcons(plate, true)
+                    ApplyRaidIcons(plate, false)
                 end
             end
             raidRefreshTimer = 0
@@ -1054,6 +1075,8 @@ SlashCmdList["GUILDPLATES"] = function(msg)
         end
         scan(WorldFrame, 0)
         print("|cff00ff00[GP]|r Найдено nameplate-фреймов: "..found)
+        print(string.format("|cff00ff00[GP]|r hooked=%d db=%d filter=%d",
+            CountTable(hookedPlates), CountTable(GuildPlatesDB), CountTable(GuildFilter)))
         return
     end
     HH1TC:Open("indicators")
