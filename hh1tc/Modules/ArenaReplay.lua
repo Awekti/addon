@@ -17,7 +17,7 @@ local function BuildArenaReplayPanel(parent)
     hint:SetWidth(420)
     hint:SetJustifyH("LEFT")
     HH1TC:StyleFont(hint, "description")
-    hint:SetText("Откройте окно PVP-ладдера, затем нажмите кнопку ниже для запуска реплея.")
+    hint:SetText("Для начала нужно просмотреть один реплей вручную.")
 
     local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     btn:SetSize(140, 28)
